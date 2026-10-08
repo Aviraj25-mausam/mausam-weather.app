@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+<defs>
+  <linearGradient id="bg" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="1024" y2="1024">
+    <stop offset="0" stop-color="#1B2573"/><stop offset="0.52" stop-color="#0F6A8E"/><stop offset="1" stop-color="#10A8A0"/>
+  </linearGradient>
+  <radialGradient id="blobA" gradientUnits="userSpaceOnUse" cx="170" cy="130" r="480">
+    <stop offset="0" stop-color="#8A6CFF" stop-opacity="0.5"/><stop offset="1" stop-color="#8A6CFF" stop-opacity="0"/>
+  </radialGradient>
+  <radialGradient id="blobB" gradientUnits="userSpaceOnUse" cx="900" cy="960" r="560">
+    <stop offset="0" stop-color="#2FF0D6" stop-opacity="0.42"/><stop offset="1" stop-color="#2FF0D6" stop-opacity="0"/>
+  </radialGradient>
+  <radialGradient id="glow" gradientUnits="userSpaceOnUse" cx="661.5" cy="414.25" r="379.5">
+    <stop offset="0" stop-color="#FFE7A8" stop-opacity="0.42"/><stop offset="1" stop-color="#FFC15E" stop-opacity="0"/>
+  </radialGradient>
+  <radialGradient id="sunG" gradientUnits="userSpaceOnUse" cx="604.0" cy="345.25" r="287.5">
+    <stop offset="0" stop-color="#FFF3C4"/><stop offset="0.45" stop-color="#FFC24D"/><stop offset="1" stop-color="#F4801A"/>
+  </radialGradient>
+  <linearGradient id="tint" gradientUnits="userSpaceOnUse" x1="213.0" y1="368.25" x2="811.0" y2="839.75">
+    <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.52"/><stop offset="0.5" stop-color="#EAF8FF" stop-opacity="0.2"/><stop offset="1" stop-color="#BFE9FF" stop-opacity="0.1"/>
+  </linearGradient>
+  <linearGradient id="refl" gradientUnits="userSpaceOnUse" x1="0" y1="724.75" x2="0" y2="822.5">
+    <stop offset="0" stop-color="#9FE8FF" stop-opacity="0"/><stop offset="1" stop-color="#9FE8FF" stop-opacity="0.3"/>
+  </linearGradient>
+  <radialGradient id="spec" gradientUnits="userSpaceOnUse" cx="397.0" cy="506.25" r="264.5">
+    <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.5"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+  </radialGradient>
+  <linearGradient id="rimGrad" gradientUnits="userSpaceOnUse" x1="213.0" y1="345.25" x2="834.0" y2="839.75">
+    <stop offset="0" stop-color="#FFFFFF"/><stop offset="0.55" stop-color="#8C8C8C"/><stop offset="1" stop-color="#4A4A4A"/>
+  </linearGradient>
+  <linearGradient id="rimGrad2" gradientUnits="userSpaceOnUse" x1="213.0" y1="345.25" x2="834.0" y2="839.75">
+    <stop offset="0" stop-color="#000000"/><stop offset="0.6" stop-color="#2A2A2A"/><stop offset="1" stop-color="#C8C8C8"/>
+  </linearGradient>
+  <mask id="rimMask" maskUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1024"><rect width="1024" height="1024" fill="url(#rimGrad)"/></mask>
+  <mask id="rimMask2" maskUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1024"><rect width="1024" height="1024" fill="url(#rimGrad2)"/></mask>
+  <linearGradient id="sheen" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="720" y2="720">
+    <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.2"/><stop offset="0.6" stop-color="#FFFFFF" stop-opacity="0"/>
+  </linearGradient>
+  <clipPath id="cloudClip"><circle cx="293.5" cy="690.25" r="132.25"/><circle cx="489.0" cy="575.25" r="184.0"/><circle cx="707.5" cy="667.25" r="155.25"/><rect x="293.5" y="690.25" width="414.0" height="132.25"/></clipPath>
+  <clipPath id="iconClip"><rect width="1024" height="1024" rx="230"/></clipPath>
+  <filter id="blurSun" x="-70%" y="-70%" width="240%" height="240%"><feGaussianBlur stdDeviation="34.5"/></filter>
+  <filter id="shadowF" x="-40%" y="-40%" width="180%" height="190%" color-interpolation-filters="sRGB">
+    <feGaussianBlur in="SourceAlpha" stdDeviation="34.5" result="b"/>
+    <feOffset in="b" dy="43.7" result="o"/>
+    <feFlood flood-color="#021A30" flood-opacity="0.55"/>
+    <feComposite in2="o" operator="in"/>
+  </filter>
+  <filter id="rimF" x="-10%" y="-10%" width="120%" height="120%" color-interpolation-filters="sRGB">
+    <feMorphology in="SourceAlpha" operator="erode" radius="5.75" result="er"/>
+    <feComposite in="SourceAlpha" in2="er" operator="out" result="rim"/>
+    <feGaussianBlur in="rim" stdDeviation="1.38" result="rimb"/>
+    <feFlood flood-color="#FFFFFF"/>
+    <feComposite in2="rimb" operator="in"/>
+  </filter>
+  <filter id="rimF2" x="-10%" y="-10%" width="120%" height="120%" color-interpolation-filters="sRGB">
+    <feMorphology in="SourceAlpha" operator="erode" radius="4.6" result="er"/>
+    <feComposite in="SourceAlpha" in2="er" operator="out" result="rim"/>
+    <feGaussianBlur in="rim" stdDeviation="1.84" result="rimb"/>
+    <feFlood flood-color="#A8EEFF"/>
+    <feComposite in2="rimb" operator="in"/>
+  </filter>
+</defs>
+<g clip-path="url(#iconClip)">
+  <rect width="1024" height="1024" fill="url(#bg)"/><rect width="1024" height="1024" fill="url(#blobA)"/><rect width="1024" height="1024" fill="url(#blobB)"/><circle cx="661.5" cy="414.25" r="379.5" fill="url(#glow)"/>
+  <circle cx="661.5" cy="414.25" r="201.25" fill="url(#sunG)"/>
+  <g filter="url(#shadowF)"><circle cx="293.5" cy="690.25" r="132.25" fill="#000"/><circle cx="489.0" cy="575.25" r="184.0" fill="#000"/><circle cx="707.5" cy="667.25" r="155.25" fill="#000"/><rect x="293.5" y="690.25" width="414.0" height="132.25" fill="#000"/></g>
+  <g clip-path="url(#cloudClip)">
+    <rect width="1024" height="1024" fill="url(#bg)"/><rect width="1024" height="1024" fill="url(#blobA)"/><rect width="1024" height="1024" fill="url(#blobB)"/><circle cx="661.5" cy="414.25" r="379.5" fill="url(#glow)"/>
+    <circle cx="661.5" cy="414.25" r="201.25" fill="url(#sunG)" filter="url(#blurSun)"/>
+    <rect width="1024" height="1024" fill="url(#tint)"/>
+    <rect width="1024" height="1024" fill="url(#refl)"/>
+    <rect width="1024" height="1024" fill="url(#spec)"/>
+  </g>
+  <g mask="url(#rimMask2)"><g filter="url(#rimF2)"><circle cx="293.5" cy="690.25" r="132.25" fill="#fff"/><circle cx="489.0" cy="575.25" r="184.0" fill="#fff"/><circle cx="707.5" cy="667.25" r="155.25" fill="#fff"/><rect x="293.5" y="690.25" width="414.0" height="132.25" fill="#fff"/></g></g>
+  <g mask="url(#rimMask)"><g filter="url(#rimF)"><circle cx="293.5" cy="690.25" r="132.25" fill="#fff"/><circle cx="489.0" cy="575.25" r="184.0" fill="#fff"/><circle cx="707.5" cy="667.25" r="155.25" fill="#fff"/><rect x="293.5" y="690.25" width="414.0" height="132.25" fill="#fff"/></g></g>
+  <rect width="1024" height="1024" fill="url(#sheen)"/>
+  <rect x="3" y="3" width="1018" height="1018" rx="227" fill="none" stroke="#FFFFFF" stroke-opacity="0.3" stroke-width="6"/>
+</g>
+</svg>

@@ -1,0 +1,1216 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mausam</title>
+<meta name="description" content="Weather, air quality and severe weather alerts for cities and towns across India, in English and Hindi.">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#EAF0F3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0B161C" media="(prefers-color-scheme: dark)">
+<link rel="icon" type="image/png" sizes="48x48" href="icons/favicon-48.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Hanken+Grotesk:wght@400;500;600&family=Noto+Sans+Devanagari:wght@400;600&display=swap">
+<style>
+/* Layout: one column on phones; on wide screens the current conditions and
+   24-hour strip sit left, the instrument tiles and air quality sit right. */
+:root {
+  --bg: #EAF0F3;
+  --surface: #FFFFFF;
+  --surface-2: #F1F5F7;
+  --ink: #0F2128;
+  --ink-2: #4A5F69;
+  --line: #D5DFE4;
+  --accent: #C9740A;
+  --accent-text: #98550A;
+  --cool: #2E86A8;
+  --warm: #E4572E;
+  --sun: #E9A21B;
+  --moon: #8DA2C7;
+  --cloud: #A9BCC6;
+  --cloud-dark: #6F8693;
+  --snow: #BFE3F2;
+  --tint-warn: #FCEBD3;
+  --tint-info: #DDEEF5;
+  --tint-bad: #F8DEDA;
+  --good: #2F8F5B;
+  --tint-sev1: #FBF1CF;
+  --tint-sev2: #FCE6CF;
+  --tint-sev3: #F8DCD9;
+  --font-display: "Bricolage Grotesque", "Noto Sans Devanagari", system-ui, sans-serif;
+  --font-body: "Hanken Grotesk", "Noto Sans Devanagari", system-ui, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0B161C;
+    --surface: #12222A;
+    --surface-2: #182B34;
+    --ink: #E7EFF2;
+    --ink-2: #9DB0B9;
+    --line: #243943;
+    --accent: #F2A93B;
+    --accent-text: #F2A93B;
+    --cool: #5BB5D6;
+    --warm: #FF7A52;
+    --sun: #F5B73E;
+    --moon: #B4C4E4;
+    --cloud: #7E95A1;
+    --cloud-dark: #51666F;
+    --snow: #D7EEF8;
+    --tint-warn: #3A2A12;
+    --tint-info: #12313D;
+    --tint-bad: #3C1B18;
+    --good: #58C48A;
+    --tint-sev1: #3A3210;
+    --tint-sev2: #3F2A12;
+    --tint-sev3: #421C1C;
+    color-scheme: dark;
+  }
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.45;
+}
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.app { max-width: 1080px; margin: 0 auto; padding: 20px 16px 40px; }
+
+/* header */
+.top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+.brand { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px; min-width: 0; }
+.brand-name { font-family: var(--font-display); font-weight: 700; font-size: 1.7rem; letter-spacing: -0.02em; }
+.brand-hi { font-family: var(--font-display); font-weight: 700; font-size: 1.2rem; color: var(--accent-text); }
+.brand-tag { color: var(--ink-2); font-size: 0.9rem; }
+.controls { display: flex; gap: 8px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); padding: 3px; }
+.seg button { border: 0; background: transparent; padding: 5px 12px; border-radius: 999px; color: var(--ink-2); font-weight: 600; font-size: 0.9rem; min-width: 44px; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+
+/* search */
+.search-wrap { position: relative; margin-bottom: 12px; }
+.search { display: flex; gap: 8px; }
+.search input {
+  flex: 1; min-width: 0; height: 46px; padding: 0 16px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+}
+.search input::placeholder { color: var(--ink-2); }
+.btn {
+  height: 46px; padding: 0 16px; border-radius: 12px; border: 1px solid var(--line);
+  background: var(--surface); font-weight: 600; white-space: nowrap;
+}
+.btn:hover { border-color: var(--accent); }
+.results {
+  position: absolute; z-index: 5; left: 0; right: 0; top: calc(100% + 6px);
+  margin: 0; padding: 6px; list-style: none;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+}
+.results button {
+  width: 100%; text-align: left; border: 0; background: transparent; padding: 10px 12px; border-radius: 8px;
+  display: flex; justify-content: space-between; gap: 12px;
+}
+.results button:hover, .results button:focus-visible { background: var(--surface-2); }
+.results .r-sub { color: var(--ink-2); font-size: 0.9rem; }
+.results .r-empty { padding: 10px 12px; color: var(--ink-2); }
+.notice { margin: 0 0 12px; padding: 10px 14px; border-radius: 10px; background: var(--tint-info); }
+
+/* chips */
+.chip-row { display: flex; align-items: center; gap: 8px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 6px; scrollbar-width: thin; }
+.chip-label { flex: 0 0 auto; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-2); }
+.chip {
+  flex: 0 0 auto; border: 1px solid var(--line); background: var(--surface); border-radius: 999px;
+  padding: 6px 14px; font-size: 0.92rem;
+}
+.chip:hover { border-color: var(--accent); }
+.chip[aria-current="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+/* cards */
+.grid { display: grid; gap: 14px; margin-top: 10px; grid-template-columns: minmax(0, 1fr); grid-template-areas: "alerts" "hero" "stats" "aqi" "hourly" "daily"; }
+@media (min-width: 900px) {
+  .grid { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); grid-template-areas: "alerts alerts" "hero stats" "hourly stats" "daily aqi"; }
+}
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 18px 20px; min-width: 0; }
+.card h2 { margin: 0 0 12px; font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-2); }
+.state { text-align: center; padding: 40px 20px; margin-top: 10px; }
+.state p { margin: 0 0 14px; }
+
+/* hero */
+.hero { grid-area: hero; }
+.place { margin: 0; font-family: var(--font-display); font-weight: 700; font-size: 1.5rem; letter-spacing: -0.01em; line-height: 1.2; }
+.place-sub { color: var(--ink-2); font-weight: 500; font-size: 1rem; margin-left: 8px; }
+.updated { margin: 2px 0 0; color: var(--ink-2); font-size: 0.85rem; }
+.temp-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 6px; }
+.temp { font-family: var(--font-display); font-weight: 700; font-size: clamp(4.6rem, 16vw, 7.6rem); line-height: 0.95; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; }
+.temp .unit { font-size: 0.32em; letter-spacing: 0; color: var(--ink-2); margin-left: 4px; vertical-align: top; position: relative; top: 0.35em; }
+.hero-icon { width: clamp(84px, 24vw, 128px); flex: 0 0 auto; }
+.hero-icon svg { width: 100%; height: auto; display: block; }
+.cond { margin: 4px 0 0; font-size: 1.25rem; font-weight: 600; }
+.meta { margin: 4px 0 0; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.advice { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.advice li { padding: 7px 12px; border-radius: 10px; font-size: 0.92rem; background: var(--tint-info); }
+.advice li.warn { background: var(--tint-warn); }
+.advice li.bad { background: var(--tint-bad); }
+
+/* tiles */
+.stats { grid-area: stats; align-self: start; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.tile { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px; min-width: 0; }
+.tile.wide { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.tile-label { font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-2); margin: 0 0 6px; }
+.tile-value { font-family: var(--font-display); font-weight: 700; font-size: 1.7rem; line-height: 1.1; margin: 0; font-variant-numeric: tabular-nums; }
+.tile-value small { font-size: 0.5em; font-weight: 500; color: var(--ink-2); margin-left: 3px; }
+.tile-sub { margin: 4px 0 0; color: var(--ink-2); font-size: 0.88rem; }
+.sun-times { display: flex; gap: 22px; flex-wrap: wrap; }
+.arc { width: 92px; flex: 0 0 auto; }
+.arc-line { fill: none; stroke: var(--line); stroke-width: 2; stroke-dasharray: 3 3; }
+.arc-base { stroke: var(--line); stroke-width: 1.5; }
+.arc-dot { fill: var(--sun); }
+
+/* hourly */
+.hourly { grid-area: hourly; }
+.hours { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 6px; scrollbar-width: thin; }
+.hour { flex: 0 0 64px; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 4px; border-radius: 10px; font-variant-numeric: tabular-nums; }
+.hour.now { background: var(--surface-2); }
+.hour .h-time { font-size: 0.8rem; color: var(--ink-2); }
+.hour svg { width: 32px; height: 32px; }
+.hour .h-temp { font-weight: 600; }
+.hour .h-rain { font-size: 0.78rem; color: var(--cool); min-height: 1.1em; }
+
+/* daily */
+.daily { grid-area: daily; }
+.days { list-style: none; margin: 0; padding: 0; }
+.day { display: grid; grid-template-columns: 4.4rem 28px 2.6rem 2.2rem minmax(40px, 1fr) 2.2rem; gap: 8px; align-items: center; padding: 9px 0; border-top: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+.day:first-child { border-top: 0; }
+.day svg { width: 28px; height: 28px; }
+.d-name { font-weight: 600; }
+.d-rain { font-size: 0.82rem; color: var(--cool); }
+.d-lo { text-align: right; color: var(--ink-2); }
+.d-hi { text-align: right; font-weight: 600; }
+.track { position: relative; height: 6px; border-radius: 999px; background: var(--surface-2); }
+.fill { position: absolute; top: 0; bottom: 0; border-radius: 999px; background: linear-gradient(90deg, var(--cool), var(--warm)); }
+
+/* air quality */
+.aqi { grid-area: aqi; align-self: start; }
+.aqi-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.aqi-num { font-family: var(--font-display); font-weight: 700; font-size: 3rem; line-height: 1; font-variant-numeric: tabular-nums; }
+.aqi-cat { font-weight: 600; }
+.scale { position: relative; display: flex; height: 10px; border-radius: 999px; overflow: hidden; margin: 18px 0 8px; }
+.scale span { display: block; height: 100%; }
+.marker { position: absolute; top: -5px; width: 4px; height: 20px; margin-left: -2px; border-radius: 2px; background: var(--ink); box-shadow: 0 0 0 2px var(--surface); }
+.scale-wrap { position: relative; }
+.scale-note { display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--ink-2); }
+.pm { display: flex; gap: 24px; margin-top: 14px; flex-wrap: wrap; }
+.pm p { margin: 0; }
+.pm .pm-label { font-size: 0.78rem; color: var(--ink-2); text-transform: uppercase; letter-spacing: 0.08em; }
+.pm .pm-val { font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* alerts */
+.alerts { grid-area: alerts; }
+.alerts-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; margin-bottom: 12px; }
+.alerts-head h2 { margin: 0; }
+.alerts-sub { color: var(--ink-2); font-size: 0.85rem; }
+.alert-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.alert { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 14px; padding: 12px 14px; border-radius: 12px; background: var(--tint-sev1); }
+.alert.l2 { background: var(--tint-sev2); }
+.alert.l3 { background: var(--tint-sev3); }
+.alert p { margin: 0; }
+.alert-title { font-weight: 600; }
+.alert-when { margin-left: 8px; color: var(--ink-2); font-weight: 500; }
+.alert-detail { margin-top: 2px; font-variant-numeric: tabular-nums; }
+.alert-tip { margin-top: 2px; color: var(--ink-2); font-size: 0.92rem; }
+.sev { --sev-bg: #E2B93B; display: inline-flex; align-items: center; gap: 6px; align-self: start; padding: 4px 10px; border-radius: 999px; background: var(--sev-bg); color: #231C00; font-size: 0.8rem; font-weight: 600; white-space: nowrap; }
+.sev.l2 { --sev-bg: #F28C28; color: #2A1400; }
+.sev.l3 { --sev-bg: #C93636; color: #FFFFFF; }
+.sev.s { padding: 2px 8px; font-size: 0.75rem; }
+.sev .mark { fill: var(--sev-bg); }
+.alerts-none { display: flex; align-items: center; gap: 10px; margin: 0; color: var(--ink-2); }
+@media (max-width: 520px) { .alert { grid-template-columns: minmax(0, 1fr); } }
+
+/* notifications and watchlist */
+.notify { margin-top: 14px; }
+.notify h2 { margin-bottom: 4px; }
+.nrow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; padding: 12px 0; border-top: 1px solid var(--line); }
+.switch { display: inline-flex; align-items: center; gap: 10px; font-weight: 600; cursor: pointer; }
+.switch input { width: 20px; height: 20px; accent-color: var(--accent); }
+.n-msg { color: var(--ink-2); font-size: 0.9rem; min-width: 0; }
+.select { height: 40px; padding: 0 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.n-sub { margin: 14px 0 4px; font-family: var(--font-display); font-size: 1.05rem; }
+.watch { list-style: none; margin: 0; padding: 0; }
+.w-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+.w-row > div { min-width: 0; }
+.w-name { border: 0; background: none; padding: 0; font-weight: 600; text-align: left; text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 3px; }
+.w-sub { margin-left: 8px; color: var(--ink-2); font-size: 0.88rem; }
+.w-status { color: var(--ink-2); font-size: 0.88rem; }
+.btn-sm { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 6px 12px; font-size: 0.88rem; }
+.btn-sm:hover { border-color: var(--accent); }
+.n-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.n-empty { margin: 0 0 4px; color: var(--ink-2); }
+.n-foot { margin: 14px 0 0; color: var(--ink-2); font-size: 0.85rem; }
+
+/* icons */
+.i-sun { fill: var(--sun); }
+.i-ray { stroke: var(--sun); stroke-width: 2.4; stroke-linecap: round; }
+.i-moon { fill: var(--moon); }
+.i-cloud { fill: var(--cloud); }
+.i-cloud-dark { fill: var(--cloud-dark); }
+.i-cloud-faint { fill: var(--cloud); opacity: 0.7; }
+.i-drop { stroke: var(--cool); stroke-width: 2.6; stroke-linecap: round; fill: none; }
+.i-flake { fill: var(--snow); stroke: var(--cloud); stroke-width: 0.8; }
+.i-line { stroke: var(--cloud); stroke-width: 2.6; stroke-linecap: round; }
+.i-bolt { fill: var(--sun); }
+
+footer { margin-top: 22px; color: var(--ink-2); font-size: 0.85rem; display: flex; flex-direction: column; gap: 4px; }
+footer a { color: var(--accent-text); }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <span class="brand-name">Mausam</span>
+      <span class="brand-hi" lang="hi">मौसम</span>
+      <span class="brand-tag" id="tagline"></span>
+    </div>
+    <div class="controls">
+      <div class="seg" role="group" aria-label="Temperature unit">
+        <button type="button" id="u-C" aria-pressed="true">°C</button>
+        <button type="button" id="u-F" aria-pressed="false">°F</button>
+      </div>
+      <div class="seg" role="group" aria-label="Language">
+        <button type="button" id="l-en" aria-pressed="true">EN</button>
+        <button type="button" id="l-hi" aria-pressed="false" lang="hi">हिं</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="search-wrap">
+    <form class="search" id="search-form" role="search" autocomplete="off">
+      <label class="sr" for="q" id="q-label">Search</label>
+      <input id="q" type="search" enterkeyhint="search" spellcheck="false">
+      <button type="button" class="btn" id="locate"></button>
+    </form>
+    <ul class="results" id="results" hidden></ul>
+  </div>
+  <div class="notice" id="notice" role="status" hidden></div>
+
+  <div class="chip-row" id="recent-row" hidden></div>
+  <div class="chip-row" id="city-row"></div>
+
+  <main id="view"></main>
+
+  <section class="card notify" id="notify-card"></section>
+
+  <footer id="footer"></footer>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  const $ = (id) => document.getElementById(id);
+
+  /* ---------- text ---------- */
+  const T = {
+    en: {
+      tagline: "Weather across India",
+      search: "Search any city or town in India",
+      locate: "My location",
+      popular: "Popular",
+      recent: "Recent",
+      feels: "Feels like", high: "High", low: "Low",
+      humidity: "Humidity", wind: "Wind", uv: "UV index", pressure: "Pressure", cloud: "Cloud cover",
+      rainToday: "Rain today", chance: "chance",
+      rise: "Sunrise", set: "Sunset",
+      hourly: "Next 24 hours", daily: "7-day forecast", aqi: "Air quality (US AQI)",
+      today: "Today", tomorrow: "Tomorrow", now: "Now",
+      updated: "Updated", loading: "Loading weather…",
+      errNet: "Could not load the weather. Check your internet connection and try again.",
+      retry: "Try again",
+      noResults: "No place found in India for",
+      yourLocation: "Your location",
+      geoDenied: "Location access was denied. Search for a city instead.",
+      geoUnsupported: "This browser cannot share your location. Search for a city instead.",
+      cond0: "Clear sky", cond1: "Mostly clear", cond2: "Partly cloudy", cond3: "Overcast",
+      condFog: "Fog", condDrizzle: "Drizzle", condRain: "Rain", condShowers: "Rain showers",
+      condSnow: "Snow", condStorm: "Thunderstorm",
+      uvLow: "Low", uvMod: "Moderate", uvHigh: "High", uvVery: "Very high", uvExt: "Extreme",
+      aqGood: "Good", aqModerate: "Moderate", aqUsg: "Unhealthy for sensitive groups",
+      aqUnhealthy: "Unhealthy", aqVery: "Very unhealthy", aqHaz: "Hazardous",
+      advHeat: "Very hot. Drink water often and avoid the afternoon sun.",
+      advCold: "Cold today. Wear warm clothes.",
+      advRain: "Rain is likely today. Carry an umbrella.",
+      advSmog: "Air quality is poor. Wear an N95 mask outdoors.",
+      advUv: "Strong sun. Use sunscreen or cover up.",
+      dirs: ["N", "NE", "E", "SE", "S", "SW", "W", "NW"],
+      kmh: "km/h",
+      alertsTitle: "Weather alerts",
+      alertsSub: "Next 3 days. Based on forecast data, not an official warning.",
+      noAlerts: "No weather alerts for the next 3 days.",
+      rightNow: "Right now",
+      lvlName: ["Yellow", "Orange", "Red"],
+      lvlAct: ["Be aware", "Be prepared", "Take action"],
+      alTitle: {
+        heat: ["Hot weather", "Heatwave conditions", "Severe heat"],
+        cold: ["Cold weather", "Very cold", "Severe cold"],
+        rain: ["Heavy rain", "Very heavy rain", "Extremely heavy rain"],
+        storm: ["Thunderstorm", "Thunderstorm with hail"],
+        wind: ["Strong winds", "Very strong winds", "Gale-force winds"],
+        fog: ["Fog", "Dense fog", "Very dense fog"],
+        uv: ["Very high UV", "Extreme UV"],
+        air: ["Poor air quality", "Very poor air quality", "Hazardous air quality"]
+      },
+      alDetail: {
+        heat: (v) => `Maximum ${deg(v.tmax)}, feels like ${deg(v.feel)}.`,
+        cold: (v) => `Minimum ${deg(v.tmin)}.`,
+        rain: (v) => `Around ${Math.round(v.mm)} mm of rain expected in 24 hours.`,
+        storm: (v) => `Thunderstorms with lightning${v.hail ? " and hail" : ""} are likely.`,
+        wind: (v) => `Gusts up to ${Math.round(v.kmh)} km/h.`,
+        fog: (v) => `Visibility may fall to ${Math.round(v.m)} m.`,
+        uv: (v) => `UV index up to ${Math.round(v.uv)}.`,
+        air: (v) => `US AQI is ${Math.round(v.aqi)} right now.`
+      },
+      alTip: {
+        heat: "Stay indoors from noon to 4 pm, drink water often, and check on elderly neighbours.",
+        cold: "Wear layers, and keep children and older people warm.",
+        rain: "Avoid waterlogged roads and underpasses. Keep phones charged.",
+        storm: "Stay indoors, away from trees and open ground. Unplug sensitive devices.",
+        wind: "Secure loose objects and avoid travelling if you can.",
+        fog: "Drive slowly with fog lights on. Expect train and flight delays.",
+        uv: "Avoid the sun from 11 am to 3 pm. Use sunscreen and cover up.",
+        air: "Limit outdoor activity and wear an N95 mask outside."
+      },
+      notifTitle: "Alerts and notifications",
+      notifSwitch: "Notify me about new alerts",
+      notifMin: "Notify me from",
+      lvlOpt: ["Yellow and above", "Orange and above", "Red only"],
+      notifOn: "On",
+      notifOff: "Off",
+      notifBlocked: "Blocked in your browser. Allow notifications for this site in your browser settings, then switch this on again.",
+      notifUnsupported: "This browser does not support notifications.",
+      watchTitle: "Places I am watching",
+      watchEmpty: "No places yet. Open a city and choose the Watch button below.",
+      watchAdd: (n) => `Watch ${n}`,
+      watchRemove: "Stop watching",
+      watchFull: "You can watch up to 5 places. Remove one to add another.",
+      watchChecking: "Checking…",
+      watchFail: "Could not check",
+      watchNone: "No alerts",
+      checkNow: "Check now",
+      testBtn: "Send a test notification",
+      testTitle: "Mausam test",
+      testBody: "Notifications are working.",
+      testFail: "The test notification could not be shown. Check your browser settings.",
+      lastChecked: "Last checked",
+      checkEvery: "Checked every 30 minutes while this page is open.",
+      notifNote: "Alerts come from forecast model data, not from official warnings.",
+      moreAlerts: (n) => `${n} more weather alerts`,
+      openApp: "Open Mausam to see them.",
+      credit: "Weather data by",
+      official: "For official warnings and alerts, check",
+      imd: "India Meteorological Department"
+    },
+    hi: {
+      tagline: "पूरे भारत का मौसम",
+      search: "भारत का कोई भी शहर या कस्बा खोजें",
+      locate: "मेरा स्थान",
+      popular: "प्रमुख",
+      recent: "हाल की खोज",
+      feels: "महसूस होता है", high: "अधिकतम", low: "न्यूनतम",
+      humidity: "नमी", wind: "हवा", uv: "यूवी सूचकांक", pressure: "दबाव", cloud: "बादल",
+      rainToday: "आज की बारिश", chance: "संभावना",
+      rise: "सूर्योदय", set: "सूर्यास्त",
+      hourly: "अगले 24 घंटे", daily: "7 दिन का पूर्वानुमान", aqi: "वायु गुणवत्ता (US AQI)",
+      today: "आज", tomorrow: "कल", now: "अभी",
+      updated: "अपडेट", loading: "मौसम लोड हो रहा है…",
+      errNet: "मौसम लोड नहीं हो सका। इंटरनेट जांचें और फिर कोशिश करें।",
+      retry: "फिर कोशिश करें",
+      noResults: "भारत में कोई स्थान नहीं मिला:",
+      yourLocation: "आपका स्थान",
+      geoDenied: "स्थान की अनुमति नहीं मिली। कृपया कोई शहर खोजें।",
+      geoUnsupported: "यह ब्राउज़र आपका स्थान नहीं बता सकता। कृपया कोई शहर खोजें।",
+      cond0: "साफ आसमान", cond1: "ज्यादातर साफ", cond2: "आंशिक बादल", cond3: "घने बादल",
+      condFog: "कोहरा", condDrizzle: "बूंदाबांदी", condRain: "बारिश", condShowers: "तेज बौछारें",
+      condSnow: "बर्फबारी", condStorm: "आंधी-तूफान",
+      uvLow: "कम", uvMod: "मध्यम", uvHigh: "ज्यादा", uvVery: "बहुत ज्यादा", uvExt: "अत्यधिक",
+      aqGood: "अच्छी", aqModerate: "मध्यम", aqUsg: "संवेदनशील लोगों के लिए हानिकारक",
+      aqUnhealthy: "हानिकारक", aqVery: "बहुत हानिकारक", aqHaz: "खतरनाक",
+      advHeat: "बहुत गर्मी है। पानी पीते रहें और दोपहर की धूप से बचें।",
+      advCold: "आज ठंड है। गर्म कपड़े पहनें।",
+      advRain: "आज बारिश की संभावना है। छाता साथ रखें।",
+      advSmog: "हवा खराब है। बाहर N95 मास्क पहनें।",
+      advUv: "तेज धूप है। सनस्क्रीन लगाएं या शरीर ढकें।",
+      dirs: ["उ", "उ-पू", "पू", "द-पू", "द", "द-प", "प", "उ-प"],
+      kmh: "किमी/घं",
+      alertsTitle: "मौसम अलर्ट",
+      alertsSub: "अगले 3 दिन। पूर्वानुमान डेटा पर आधारित, आधिकारिक चेतावनी नहीं।",
+      noAlerts: "अगले 3 दिन कोई मौसम अलर्ट नहीं है।",
+      rightNow: "अभी",
+      lvlName: ["पीला", "नारंगी", "लाल"],
+      lvlAct: ["सावधान रहें", "तैयार रहें", "तुरंत कार्रवाई करें"],
+      alTitle: {
+        heat: ["गर्मी", "लू जैसे हालात", "भीषण गर्मी"],
+        cold: ["ठंड", "तेज ठंड", "भीषण ठंड"],
+        rain: ["भारी बारिश", "बहुत भारी बारिश", "अत्यंत भारी बारिश"],
+        storm: ["आंधी-तूफान", "आंधी-तूफान और ओले"],
+        wind: ["तेज हवाएं", "बहुत तेज हवाएं", "तूफानी हवाएं"],
+        fog: ["कोहरा", "घना कोहरा", "बहुत घना कोहरा"],
+        uv: ["बहुत तेज यूवी", "अत्यधिक यूवी"],
+        air: ["खराब हवा", "बहुत खराब हवा", "खतरनाक हवा"]
+      },
+      alDetail: {
+        heat: (v) => `अधिकतम ${deg(v.tmax)}, महसूस होगा ${deg(v.feel)}।`,
+        cold: (v) => `न्यूनतम ${deg(v.tmin)}।`,
+        rain: (v) => `24 घंटे में लगभग ${Math.round(v.mm)} मिमी बारिश की संभावना।`,
+        storm: (v) => `बिजली कड़कने के साथ आंधी-तूफान${v.hail ? " और ओलावृष्टि" : ""} की संभावना।`,
+        wind: (v) => `हवा के झोंके ${Math.round(v.kmh)} किमी/घं तक।`,
+        fog: (v) => `दृश्यता घटकर ${Math.round(v.m)} मीटर तक हो सकती है।`,
+        uv: (v) => `यूवी सूचकांक ${Math.round(v.uv)} तक।`,
+        air: (v) => `अभी US AQI ${Math.round(v.aqi)} है।`
+      },
+      alTip: {
+        heat: "दोपहर 12 से 4 बजे तक घर के अंदर रहें, बार-बार पानी पिएं और बुजुर्गों का ध्यान रखें।",
+        cold: "कई परतों में कपड़े पहनें और बच्चों व बुजुर्गों को गर्म रखें।",
+        rain: "जलभराव वाली सड़कों और अंडरपास से बचें। फोन चार्ज रखें।",
+        storm: "घर के अंदर रहें, पेड़ों और खुले मैदान से दूर रहें। बिजली के उपकरण बंद करें।",
+        wind: "ढीली चीजें सुरक्षित रखें और हो सके तो सफर टालें।",
+        fog: "धीरे चलें और फॉग लाइट जलाएं। ट्रेन और उड़ानों में देरी हो सकती है।",
+        uv: "सुबह 11 से दोपहर 3 बजे तक धूप से बचें। सनस्क्रीन लगाएं और शरीर ढकें।",
+        air: "बाहर की गतिविधि कम करें और बाहर N95 मास्क पहनें।"
+      },
+      notifTitle: "अलर्ट और नोटिफिकेशन",
+      notifSwitch: "नए अलर्ट की सूचना दें",
+      notifMin: "सूचना भेजें",
+      lvlOpt: ["पीला और उससे ऊपर", "नारंगी और उससे ऊपर", "केवल लाल"],
+      notifOn: "चालू",
+      notifOff: "बंद",
+      notifBlocked: "ब्राउज़र में रोका गया है। ब्राउज़र सेटिंग में इस साइट के लिए नोटिफिकेशन की अनुमति दें, फिर इसे दोबारा चालू करें।",
+      notifUnsupported: "यह ब्राउज़र नोटिफिकेशन का समर्थन नहीं करता।",
+      watchTitle: "जिन जगहों पर नजर है",
+      watchEmpty: "अभी कोई जगह नहीं। कोई शहर खोलें और नीचे “नजर रखें” बटन दबाएं।",
+      watchAdd: (n) => `${n} पर नजर रखें`,
+      watchRemove: "नजर रखना बंद करें",
+      watchFull: "आप ज्यादा से ज्यादा 5 जगहों पर नजर रख सकते हैं। नई जगह जोड़ने के लिए एक हटाएं।",
+      watchChecking: "जांच हो रही है…",
+      watchFail: "जांच नहीं हो सकी",
+      watchNone: "कोई अलर्ट नहीं",
+      checkNow: "अभी जांचें",
+      testBtn: "टेस्ट नोटिफिकेशन भेजें",
+      testTitle: "मौसम टेस्ट",
+      testBody: "नोटिफिकेशन काम कर रहे हैं।",
+      testFail: "टेस्ट नोटिफिकेशन नहीं दिखाया जा सका। ब्राउज़र सेटिंग जांचें।",
+      lastChecked: "आखिरी जांच",
+      checkEvery: "यह पेज खुला होने पर हर 30 मिनट में जांच होती है।",
+      notifNote: "अलर्ट पूर्वानुमान मॉडल के डेटा से बनते हैं, आधिकारिक चेतावनी नहीं हैं।",
+      moreAlerts: (n) => `${n} और मौसम अलर्ट`,
+      openApp: "देखने के लिए मौसम खोलें।",
+      credit: "मौसम डेटा:",
+      official: "आधिकारिक चेतावनियों के लिए देखें",
+      imd: "भारत मौसम विज्ञान विभाग"
+    }
+  };
+
+  const CITIES = [
+    { name: "Delhi", hi: "दिल्ली", sub: "Delhi", subHi: "दिल्ली", lat: 28.6139, lon: 77.2090 },
+    { name: "Mumbai", hi: "मुंबई", sub: "Maharashtra", subHi: "महाराष्ट्र", lat: 19.0760, lon: 72.8777 },
+    { name: "Bengaluru", hi: "बेंगलुरु", sub: "Karnataka", subHi: "कर्नाटक", lat: 12.9716, lon: 77.5946 },
+    { name: "Chennai", hi: "चेन्नई", sub: "Tamil Nadu", subHi: "तमिलनाडु", lat: 13.0827, lon: 80.2707 },
+    { name: "Kolkata", hi: "कोलकाता", sub: "West Bengal", subHi: "पश्चिम बंगाल", lat: 22.5726, lon: 88.3639 },
+    { name: "Hyderabad", hi: "हैदराबाद", sub: "Telangana", subHi: "तेलंगाना", lat: 17.3850, lon: 78.4867 },
+    { name: "Pune", hi: "पुणे", sub: "Maharashtra", subHi: "महाराष्ट्र", lat: 18.5204, lon: 73.8567 },
+    { name: "Ahmedabad", hi: "अहमदाबाद", sub: "Gujarat", subHi: "गुजरात", lat: 23.0225, lon: 72.5714 },
+    { name: "Jaipur", hi: "जयपुर", sub: "Rajasthan", subHi: "राजस्थान", lat: 26.9124, lon: 75.7873 },
+    { name: "Lucknow", hi: "लखनऊ", sub: "Uttar Pradesh", subHi: "उत्तर प्रदेश", lat: 26.8467, lon: 80.9462 },
+    { name: "Shimla", hi: "शिमला", sub: "Himachal Pradesh", subHi: "हिमाचल प्रदेश", lat: 31.1048, lon: 77.1734 },
+    { name: "Kochi", hi: "कोच्चि", sub: "Kerala", subHi: "केरल", lat: 9.9312, lon: 76.2673 }
+  ];
+
+  /* ---------- state and storage ---------- */
+  const store = {
+    get(k, d) {
+      try {
+        const v = localStorage.getItem("mausam." + k);
+        return v === null ? d : JSON.parse(v);
+      } catch (e) { return d; }
+    },
+    set(k, v) {
+      try { localStorage.setItem("mausam." + k, JSON.stringify(v)); } catch (e) { /* storage unavailable */ }
+    }
+  };
+
+  const state = {
+    unit: store.get("unit", "C") === "F" ? "F" : "C",
+    lang: store.get("lang", "en") === "hi" ? "hi" : "en",
+    place: null, w: null, air: null, alerts: [], status: "idle", token: 0
+  };
+
+  const t = (k) => T[state.lang][k];
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+  /* ---------- formatting ---------- */
+  const conv = (c) => (state.unit === "C" ? c : (c * 9) / 5 + 32);
+  const deg = (c) => Math.round(conv(c)) + "°";
+  const hour12 = (h) => (h % 12 || 12) + " " + (h < 12 ? "AM" : "PM");
+  const clock = (s) => { const h = +s.slice(11, 13); return (h % 12 || 12) + ":" + s.slice(14, 16) + " " + (h < 12 ? "AM" : "PM"); };
+  const minutes = (s) => +s.slice(11, 13) * 60 + +s.slice(14, 16);
+  const placeName = (p) => (p.here ? t("yourLocation") : state.lang === "hi" && p.hi ? p.hi : p.name);
+  const placeSub = (p) => (p.here ? p.sub : state.lang === "hi" && p.subHi ? p.subHi : p.sub || "");
+  const samePlace = (a, b) => a && b && Math.abs(a.lat - b.lat) < 0.01 && Math.abs(a.lon - b.lon) < 0.01;
+
+  function dayName(i, dateStr) {
+    if (i === 0) return t("today");
+    if (i === 1) return t("tomorrow");
+    const [y, m, d] = dateStr.split("-").map(Number);
+    return new Intl.DateTimeFormat(state.lang === "hi" ? "hi-IN" : "en-IN", { weekday: "short" }).format(new Date(y, m - 1, d));
+  }
+
+  /* ---------- weather codes ---------- */
+  function kindOf(c) {
+    if (c <= 1) return "clear";
+    if (c === 2) return "partly";
+    if (c === 3) return "cloud";
+    if (c === 45 || c === 48) return "fog";
+    if (c >= 51 && c <= 57) return "drizzle";
+    if ((c >= 61 && c <= 67) || (c >= 80 && c <= 82)) return "rain";
+    if ((c >= 71 && c <= 77) || c === 85 || c === 86) return "snow";
+    if (c >= 95) return "storm";
+    return "cloud";
+  }
+  function condKey(c) {
+    if (c === 0) return "cond0";
+    if (c === 1) return "cond1";
+    if (c === 2) return "cond2";
+    if (c === 3) return "cond3";
+    if (c === 45 || c === 48) return "condFog";
+    if (c >= 51 && c <= 57) return "condDrizzle";
+    if (c >= 61 && c <= 67) return "condRain";
+    if (c >= 80 && c <= 82) return "condShowers";
+    if ((c >= 71 && c <= 77) || c === 85 || c === 86) return "condSnow";
+    if (c >= 95) return "condStorm";
+    return "cond3";
+  }
+
+  /* ---------- icons ---------- */
+  let uid = 0;
+  function sunSvg(cx, cy, r) {
+    let rays = "";
+    for (let a = 0; a < 360; a += 45) {
+      const rad = (a * Math.PI) / 180, c = Math.cos(rad), s = Math.sin(rad);
+      rays += `<line class="i-ray" x1="${(cx + c * (r + 3)).toFixed(1)}" y1="${(cy + s * (r + 3)).toFixed(1)}" x2="${(cx + c * (r + 6)).toFixed(1)}" y2="${(cy + s * (r + 6)).toFixed(1)}"/>`;
+    }
+    return `<circle class="i-sun" cx="${cx}" cy="${cy}" r="${r}"/>${rays}`;
+  }
+  function moonSvg(cx, cy, r) {
+    const id = "mm" + uid++;
+    return `<mask id="${id}"><rect width="48" height="48" fill="#fff"/><circle cx="${cx + 7}" cy="${cy - 5}" r="${(r * 0.8).toFixed(1)}" fill="#000"/></mask><circle class="i-moon" cx="${cx}" cy="${cy}" r="${r}" mask="url(#${id})"/>`;
+  }
+  function cloudSvg(dx, dy, cls) {
+    return `<g class="${cls || "i-cloud"}" transform="translate(${dx} ${dy})"><circle cx="18" cy="30" r="7"/><circle cx="27" cy="24" r="9"/><circle cx="35" cy="31" r="6"/><rect x="18" y="30" width="17" height="7"/></g>`;
+  }
+  function icon(kind, night) {
+    let inner = "";
+    switch (kind) {
+      case "clear":
+        inner = night ? moonSvg(24, 24, 12) : sunSvg(24, 24, 9);
+        break;
+      case "partly":
+        inner = (night ? moonSvg(16, 17, 8) : sunSvg(16, 17, 6)) + cloudSvg(4, 6);
+        break;
+      case "cloud":
+        inner = cloudSvg(-1, 1) + cloudSvg(5, 5, "i-cloud-dark");
+        break;
+      case "fog":
+        inner = cloudSvg(0, -5, "i-cloud-faint") + `<line class="i-line" x1="11" y1="36" x2="37" y2="36"/><line class="i-line" x1="15" y1="41" x2="41" y2="41"/>`;
+        break;
+      case "drizzle":
+        inner = cloudSvg(0, -6) + `<line class="i-drop" x1="19" y1="36" x2="18" y2="39"/><line class="i-drop" x1="27" y1="36" x2="26" y2="39"/><line class="i-drop" x1="35" y1="36" x2="34" y2="39"/>`;
+        break;
+      case "rain":
+        inner = cloudSvg(0, -6) + `<line class="i-drop" x1="19" y1="35" x2="16" y2="43"/><line class="i-drop" x1="27" y1="35" x2="24" y2="43"/><line class="i-drop" x1="35" y1="35" x2="32" y2="43"/>`;
+        break;
+      case "snow":
+        inner = cloudSvg(0, -6) + `<circle class="i-flake" cx="19" cy="38" r="2.4"/><circle class="i-flake" cx="27" cy="42" r="2.4"/><circle class="i-flake" cx="35" cy="38" r="2.4"/>`;
+        break;
+      case "storm":
+        inner = cloudSvg(0, -8, "i-cloud-dark") + `<polygon class="i-bolt" points="26,28 19,39 24,39 21,47 31,35 26,35 29,28"/>`;
+        break;
+      default:
+        inner = cloudSvg(0, 2);
+    }
+    return `<svg viewBox="0 0 48 48" aria-hidden="true" focusable="false">${inner}</svg>`;
+  }
+
+  /* ---------- categories ---------- */
+  function aqiCat(v) {
+    if (v <= 50) return "aqGood";
+    if (v <= 100) return "aqModerate";
+    if (v <= 150) return "aqUsg";
+    if (v <= 200) return "aqUnhealthy";
+    if (v <= 300) return "aqVery";
+    return "aqHaz";
+  }
+  const AQI_COLORS = ["#2F9E63", "#E2B93B", "#F28C28", "#D64545", "#8E4BB0", "#7A1F3D"];
+  const AQI_WIDTHS = [50, 50, 50, 50, 100, 100];
+  const uvCat = (v) => (v < 3 ? "uvLow" : v < 6 ? "uvMod" : v < 8 ? "uvHigh" : v < 11 ? "uvVery" : "uvExt");
+  const compass = (d) => t("dirs")[Math.round((((d % 360) + 360) % 360) / 45) % 8];
+
+  function adviceFor(w, air) {
+    const out = [];
+    const feels = w.current.apparent_temperature;
+    if (feels >= 41) out.push(["warn", "advHeat"]);
+    else if (feels <= 8) out.push(["info", "advCold"]);
+    if ((w.daily.precipitation_probability_max[0] ?? 0) >= 50) out.push(["info", "advRain"]);
+    if (air && air.us_aqi > 150) out.push(["bad", "advSmog"]);
+    if ((w.daily.uv_index_max[0] ?? 0) >= 8) out.push(["warn", "advUv"]);
+    return out.slice(0, 3);
+  }
+
+  function sunArc(w) {
+    const rise = minutes(w.daily.sunrise[0]), set = minutes(w.daily.sunset[0]), now = minutes(w.current.time);
+    const f = (now - rise) / (set - rise);
+    let dot = "";
+    if (f >= 0 && f <= 1) {
+      const th = Math.PI * (1 - f);
+      dot = `<circle class="arc-dot" cx="${(40 + 30 * Math.cos(th)).toFixed(1)}" cy="${(40 - 30 * Math.sin(th)).toFixed(1)}" r="4.5"/>`;
+    }
+    return `<svg class="arc" viewBox="0 0 80 46" aria-hidden="true"><path class="arc-line" d="M10 40 A30 30 0 0 1 70 40"/><line class="arc-base" x1="4" y1="40" x2="76" y2="40"/>${dot}</svg>`;
+  }
+
+  /* ---------- alerts ---------- */
+  /* Levels follow the IMD colour code: 1 yellow (be aware), 2 orange (be prepared), 3 red (take action).
+     Rain steps are IMD's rainfall classes (heavy, very heavy, extremely heavy). The rest are plain thresholds. */
+  const lvlHigh = (v, a, b, c) => (v >= c ? 3 : v >= b ? 2 : v >= a ? 1 : 0);
+  const lvlLow = (v, a, b, c) => (v <= c ? 3 : v <= b ? 2 : v <= a ? 1 : 0);
+
+  function computeAlerts(w, air) {
+    const d = w.daily, h = w.hourly, out = [];
+    const days = Math.min(3, d.time.length);
+    for (let i = 0; i < days; i++) {
+      const date = d.time[i];
+      const add = (type, level, vals) => { if (level > 0) out.push({ type, level, day: i, date, vals }); };
+
+      const tmax = d.temperature_2m_max[i];
+      const feel = d.apparent_temperature_max ? d.apparent_temperature_max[i] : tmax;
+      let heat = lvlHigh(tmax, 40, 43, 46);
+      if (heat === 0 && feel >= 44) heat = 1;
+      add("heat", heat, { tmax, feel });
+
+      const tmin = d.temperature_2m_min[i];
+      add("cold", lvlLow(tmin, 6, 3, 0), { tmin });
+
+      const mm = d.precipitation_sum[i] ?? 0;
+      add("rain", lvlHigh(mm, 64.5, 115.6, 204.5), { mm });
+
+      const code = d.weather_code[i];
+      add("storm", code >= 96 ? 2 : code === 95 ? 1 : 0, { hail: code >= 96 });
+
+      const gust = d.wind_gusts_10m_max ? d.wind_gusts_10m_max[i] ?? 0 : 0;
+      add("wind", lvlHigh(gust, 50, 65, 90), { kmh: gust });
+
+      let vis = Infinity;
+      if (h.visibility) {
+        for (let k = 0; k < h.time.length; k++) {
+          if (h.time[k].startsWith(date) && h.visibility[k] != null) vis = Math.min(vis, h.visibility[k]);
+        }
+      }
+      add("fog", Number.isFinite(vis) ? lvlLow(vis, 500, 200, 50) : 0, { m: vis });
+
+      const uv = d.uv_index_max[i] ?? 0;
+      add("uv", uv >= 11 ? 2 : uv >= 8 ? 1 : 0, { uv });
+    }
+    if (air && typeof air.us_aqi === "number") {
+      const level = lvlHigh(air.us_aqi, 151, 201, 301);
+      if (level > 0) out.push({ type: "air", level, day: 0, date: d.time[0], vals: { aqi: air.us_aqi }, now: true });
+    }
+    return out.sort((x, y) => y.level - x.level || x.day - y.day);
+  }
+
+  function alertTitle(a) {
+    const names = t("alTitle")[a.type];
+    return names[Math.min(a.level, names.length) - 1];
+  }
+  const alertDetail = (a) => t("alDetail")[a.type](a.vals);
+  const whenLabel = (a) => (a.now ? t("rightNow") : dayName(a.day, a.date));
+
+  const warnIcon = () =>
+    `<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false"><path d="M8 1.2 15.2 14H0.8z" fill="currentColor"/><rect class="mark" x="7.2" y="5.6" width="1.6" height="4.6"/><circle class="mark" cx="8" cy="12" r="1"/></svg>`;
+  const checkIcon = () =>
+    `<svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="9" fill="var(--good)"/><path d="M5.8 10.4l2.8 2.8 5.6-5.8" fill="none" stroke="var(--surface)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+  function alertsCard() {
+    const list = state.alerts;
+    const body = list.length
+      ? `<ul class="alert-list">${list.map((a) =>
+          `<li class="alert l${a.level}"><span class="sev l${a.level}">${warnIcon()}${esc(t("lvlName")[a.level - 1])} · ${esc(t("lvlAct")[a.level - 1])}</span>` +
+          `<div><p class="alert-title">${esc(alertTitle(a))}<span class="alert-when">${esc(whenLabel(a))}</span></p>` +
+          `<p class="alert-detail">${esc(alertDetail(a))}</p><p class="alert-tip">${esc(t("alTip")[a.type])}</p></div></li>`).join("")}</ul>`
+      : `<p class="alerts-none">${checkIcon()}<span>${esc(t("noAlerts"))}</span></p>`;
+    return `<section class="card alerts" aria-label="${esc(t("alertsTitle"))}"><div class="alerts-head"><h2>${esc(t("alertsTitle"))}</h2><span class="alerts-sub">${esc(t("alertsSub"))}</span></div>${body}</section>`;
+  }
+
+  /* ---------- rendering ---------- */
+  function renderChips() {
+    const recent = store.get("recent", []);
+    const rr = $("recent-row");
+    rr.hidden = recent.length === 0;
+    rr.innerHTML = recent.length
+      ? `<span class="chip-label">${esc(t("recent"))}</span>` +
+        recent.map((p, i) => `<button type="button" class="chip" data-i="${i}"${samePlace(p, state.place) ? ' aria-current="true"' : ""}>${esc(placeName(p))}</button>`).join("")
+      : "";
+    rr.onclick = (e) => { const b = e.target.closest("button[data-i]"); if (b) pick(recent[+b.dataset.i]); };
+
+    const cr = $("city-row");
+    cr.innerHTML = `<span class="chip-label">${esc(t("popular"))}</span>` +
+      CITIES.map((p, i) => `<button type="button" class="chip" data-i="${i}"${samePlace(p, state.place) ? ' aria-current="true"' : ""}>${esc(placeName(p))}</button>`).join("");
+    cr.onclick = (e) => { const b = e.target.closest("button[data-i]"); if (b) pick(CITIES[+b.dataset.i]); };
+  }
+
+  function renderControls() {
+    $("u-C").setAttribute("aria-pressed", String(state.unit === "C"));
+    $("u-F").setAttribute("aria-pressed", String(state.unit === "F"));
+    $("l-en").setAttribute("aria-pressed", String(state.lang === "en"));
+    $("l-hi").setAttribute("aria-pressed", String(state.lang === "hi"));
+  }
+
+  function applyLang() {
+    document.documentElement.lang = state.lang;
+    $("tagline").textContent = t("tagline");
+    $("q").placeholder = t("search");
+    $("q-label").textContent = t("search");
+    $("locate").textContent = t("locate");
+    $("footer").innerHTML =
+      `<span>${esc(t("credit"))} <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a></span>` +
+      `<span>${esc(t("official"))} <a href="https://mausam.imd.gov.in/" target="_blank" rel="noopener">${esc(t("imd"))}</a></span>`;
+  }
+
+  function render() {
+    renderChips();
+    renderControls();
+    const v = $("view");
+
+    if (state.status === "loading") {
+      v.innerHTML = `<div class="card state">${esc(t("loading"))}</div>`;
+      return;
+    }
+    if (state.status === "error") {
+      v.innerHTML = `<div class="card state"><p>${esc(t("errNet"))}</p><button type="button" class="btn" id="retry">${esc(t("retry"))}</button></div>`;
+      $("retry").onclick = () => load(state.place);
+      return;
+    }
+    if (state.status !== "ready") return;
+
+    const w = state.w, air = state.air, c = w.current, d = w.daily, h = w.hourly;
+    const kind = kindOf(c.weather_code);
+    const night = c.is_day === 0;
+
+    /* hero */
+    const advice = adviceFor(w, air);
+    const hero = `
+      <section class="card hero" aria-label="${esc(placeName(state.place))}">
+        <h1 class="place">${esc(placeName(state.place))}<span class="place-sub">${esc(placeSub(state.place))}</span></h1>
+        <p class="updated">${esc(t("updated"))} ${esc(clock(c.time))} IST</p>
+        <div class="temp-row">
+          <div class="temp">${Math.round(conv(c.temperature_2m))}<span class="unit">°${state.unit}</span></div>
+          <div class="hero-icon">${icon(kind, night)}</div>
+        </div>
+        <p class="cond">${esc(t(condKey(c.weather_code)))}</p>
+        <p class="meta">${esc(t("feels"))} ${deg(c.apparent_temperature)} · ${esc(t("high"))} ${deg(d.temperature_2m_max[0])} · ${esc(t("low"))} ${deg(d.temperature_2m_min[0])}</p>
+        ${advice.length ? `<ul class="advice">${advice.map(([tone, key]) => `<li class="${tone}">${esc(t(key))}</li>`).join("")}</ul>` : ""}
+      </section>`;
+
+    /* tiles */
+    const uv = d.uv_index_max[0] ?? 0;
+    const rainMm = d.precipitation_sum[0] ?? 0;
+    const rainProb = d.precipitation_probability_max[0] ?? 0;
+    const stats = `
+      <div class="stats">
+        <div class="tile"><p class="tile-label">${esc(t("humidity"))}</p><p class="tile-value">${Math.round(c.relative_humidity_2m)}<small>%</small></p></div>
+        <div class="tile"><p class="tile-label">${esc(t("wind"))}</p><p class="tile-value">${Math.round(c.wind_speed_10m)}<small>${esc(t("kmh"))}</small></p><p class="tile-sub">${esc(compass(c.wind_direction_10m))}</p></div>
+        <div class="tile"><p class="tile-label">${esc(t("uv"))}</p><p class="tile-value">${Math.round(uv)}</p><p class="tile-sub">${esc(t(uvCat(uv)))}</p></div>
+        <div class="tile"><p class="tile-label">${esc(t("rainToday"))}</p><p class="tile-value">${rainMm.toFixed(1)}<small>mm</small></p><p class="tile-sub">${Math.round(rainProb)}% ${esc(t("chance"))}</p></div>
+        <div class="tile"><p class="tile-label">${esc(t("pressure"))}</p><p class="tile-value">${Math.round(c.pressure_msl)}<small>hPa</small></p></div>
+        <div class="tile"><p class="tile-label">${esc(t("cloud"))}</p><p class="tile-value">${Math.round(c.cloud_cover ?? 0)}<small>%</small></p></div>
+        <div class="tile wide"><div class="sun-times"><div><p class="tile-label">${esc(t("rise"))}</p><p class="tile-value">${esc(clock(d.sunrise[0]))}</p></div><div><p class="tile-label">${esc(t("set"))}</p><p class="tile-value">${esc(clock(d.sunset[0]))}</p></div></div>${sunArc(w)}</div>
+      </div>`;
+
+    /* hourly */
+    const cur = c.time.slice(0, 13) + ":00";
+    let i0 = h.time.findIndex((x) => x >= cur);
+    if (i0 < 0) i0 = 0;
+    let hours = "";
+    for (let i = i0; i < Math.min(i0 + 24, h.time.length); i++) {
+      const rp = h.precipitation_probability[i];
+      hours += `<div class="hour${i === i0 ? " now" : ""}">
+        <span class="h-time">${i === i0 ? esc(t("now")) : hour12(+h.time[i].slice(11, 13))}</span>
+        ${icon(kindOf(h.weather_code[i]), h.is_day[i] === 0)}
+        <span class="h-temp">${deg(h.temperature_2m[i])}</span>
+        <span class="h-rain">${rp >= 20 ? Math.round(rp) + "%" : ""}</span>
+      </div>`;
+    }
+    const hourly = `<section class="card hourly"><h2>${esc(t("hourly"))}</h2><div class="hours">${hours}</div></section>`;
+
+    /* daily */
+    const mins = d.temperature_2m_min, maxs = d.temperature_2m_max;
+    const gmin = Math.min(...mins), gmax = Math.max(...maxs), span = Math.max(gmax - gmin, 1);
+    let days = "";
+    for (let i = 0; i < d.time.length; i++) {
+      const left = ((mins[i] - gmin) / span) * 100;
+      const width = Math.max(((maxs[i] - mins[i]) / span) * 100, 6);
+      const rp = d.precipitation_probability_max[i] ?? 0;
+      days += `<li class="day">
+        <span class="d-name">${esc(dayName(i, d.time[i]))}</span>
+        ${icon(kindOf(d.weather_code[i]), false)}
+        <span class="d-rain">${rp >= 20 ? Math.round(rp) + "%" : ""}</span>
+        <span class="d-lo">${deg(mins[i])}</span>
+        <span class="track"><span class="fill" style="left:${left.toFixed(1)}%;width:${Math.min(width, 100 - left).toFixed(1)}%"></span></span>
+        <span class="d-hi">${deg(maxs[i])}</span>
+      </li>`;
+    }
+    const daily = `<section class="card daily"><h2>${esc(t("daily"))}</h2><ul class="days">${days}</ul></section>`;
+
+    /* air quality */
+    let aqiCard = "";
+    if (air && typeof air.us_aqi === "number") {
+      const v = Math.round(air.us_aqi), cat = aqiCat(v);
+      const pos = (Math.min(v, 400) / 400) * 100;
+      aqiCard = `<section class="card aqi"><h2>${esc(t("aqi"))}</h2>
+        <div class="aqi-head"><span class="aqi-num">${v}</span><span class="aqi-cat">${esc(t(cat))}</span></div>
+        <div class="scale-wrap"><div class="scale">${AQI_WIDTHS.map((wd, i) => `<span style="width:${wd / 4}%;background:${AQI_COLORS[i]}"></span>`).join("")}</div><div class="marker" style="left:${pos.toFixed(1)}%"></div></div>
+        <div class="scale-note"><span>0</span><span>100</span><span>200</span><span>300</span><span>400+</span></div>
+        <div class="pm">
+          <p><span class="pm-label">PM2.5</span><br><span class="pm-val">${Math.round(air.pm2_5)} µg/m³</span></p>
+          <p><span class="pm-label">PM10</span><br><span class="pm-val">${Math.round(air.pm10)} µg/m³</span></p>
+        </div></section>`;
+    }
+
+    document.title = state.alerts.length ? `(${state.alerts.length}) Mausam` : "Mausam";
+    v.innerHTML = `<div class="grid">${alertsCard()}${hero}${stats}${aqiCard}${hourly}${daily}</div>`;
+  }
+
+  /* ---------- data ---------- */
+  async function fetchWeather(place) {
+    const q = `latitude=${place.lat}&longitude=${place.lon}&timezone=Asia%2FKolkata`;
+    const forecast =
+      "https://api.open-meteo.com/v1/forecast?" + q +
+      "&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,weather_code,cloud_cover,pressure_msl,wind_speed_10m,wind_direction_10m" +
+      "&hourly=temperature_2m,precipitation_probability,weather_code,is_day,visibility" +
+      "&daily=weather_code,temperature_2m_max,temperature_2m_min,apparent_temperature_max,sunrise,sunset,uv_index_max,precipitation_sum,precipitation_probability_max,wind_gusts_10m_max" +
+      "&forecast_days=7";
+    const air = "https://air-quality-api.open-meteo.com/v1/air-quality?" + q + "&current=us_aqi,pm2_5,pm10";
+    const [wr, ar] = await Promise.all([fetch(forecast), fetch(air).catch(() => null)]);
+    if (!wr.ok) throw new Error("forecast " + wr.status);
+    const w = await wr.json();
+    let aq = null;
+    try { aq = ar && ar.ok ? (await ar.json()).current : null; } catch (e) { aq = null; }
+    return { w, air: aq };
+  }
+
+  async function load(place) {
+    const token = ++state.token;
+    state.place = place;
+    state.status = "loading";
+    render();
+    try {
+      const { w, air } = await fetchWeather(place);
+      if (token !== state.token) return;
+      state.w = w; state.air = air; state.alerts = computeAlerts(w, air); state.status = "ready";
+      if (isWatched(place)) watch.status[key(place)] = { alerts: state.alerts, at: Date.now() };
+    } catch (e) {
+      if (token !== state.token) return;
+      state.status = "error";
+    }
+    render();
+    renderNotify();
+  }
+
+  function pick(place) {
+    hideResults();
+    $("q").value = "";
+    if (!place.here) {
+      const recent = store.get("recent", []).filter((p) => !samePlace(p, place));
+      recent.unshift({ name: place.name, hi: place.hi, sub: place.sub, subHi: place.subHi, lat: place.lat, lon: place.lon });
+      store.set("recent", recent.slice(0, 5));
+      store.set("last", { name: place.name, hi: place.hi, sub: place.sub, subHi: place.subHi, lat: place.lat, lon: place.lon });
+    }
+    load(place);
+  }
+
+  /* ---------- search ---------- */
+  let timer = 0, searchSeq = 0, found = [];
+  const resultsEl = $("results");
+
+  function hideResults() { resultsEl.hidden = true; resultsEl.innerHTML = ""; found = []; }
+
+  function notify(msg) {
+    const n = $("notice");
+    n.textContent = msg;
+    n.hidden = false;
+    clearTimeout(notify.t);
+    notify.t = setTimeout(() => { n.hidden = true; }, 7000);
+  }
+
+  async function search(q) {
+    const seq = ++searchSeq;
+    try {
+      const url = "https://geocoding-api.open-meteo.com/v1/search?name=" + encodeURIComponent(q) +
+        "&count=6&format=json&countryCode=IN&language=" + state.lang;
+      const r = await fetch(url);
+      if (!r.ok) throw new Error("geocoding " + r.status);
+      const j = await r.json();
+      if (seq !== searchSeq) return;
+      found = (j.results || []).map((x) => ({
+        name: x.name, hi: state.lang === "hi" ? x.name : undefined,
+        sub: x.admin1 || "", subHi: state.lang === "hi" ? x.admin1 || "" : undefined,
+        lat: x.latitude, lon: x.longitude
+      }));
+      resultsEl.hidden = false;
+      resultsEl.innerHTML = found.length
+        ? found.map((p, i) => `<li><button type="button" data-i="${i}"><span>${esc(p.name)}</span><span class="r-sub">${esc(p.sub)}</span></button></li>`).join("")
+        : `<li class="r-empty">${esc(t("noResults"))} “${esc(q)}”</li>`;
+    } catch (e) {
+      if (seq !== searchSeq) return;
+      hideResults();
+      notify(t("errNet"));
+    }
+  }
+
+  $("q").addEventListener("input", (e) => {
+    clearTimeout(timer);
+    const q = e.target.value.trim();
+    if (q.length < 2) { searchSeq++; hideResults(); return; }
+    timer = setTimeout(() => search(q), 300);
+  });
+  $("search-form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    if (found.length) { pick(found[0]); return; }
+    const q = $("q").value.trim();
+    if (q.length >= 2) search(q);
+  });
+  resultsEl.addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-i]");
+    if (b) pick(found[+b.dataset.i]);
+  });
+  document.addEventListener("click", (e) => { if (!e.target.closest(".search-wrap")) hideResults(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") hideResults(); });
+
+  /* ---------- location ---------- */
+  $("locate").addEventListener("click", () => {
+    if (!navigator.geolocation) { notify(t("geoUnsupported")); return; }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude, lon = pos.coords.longitude;
+        load({ here: true, name: "", sub: lat.toFixed(2) + "°N, " + lon.toFixed(2) + "°E", lat, lon });
+      },
+      () => notify(t("geoDenied")),
+      { timeout: 10000, maximumAge: 300000 }
+    );
+  });
+
+  /* ---------- toggles ---------- */
+  function setUnit(u) { state.unit = u; store.set("unit", u); render(); }
+  function setLang(l) { state.lang = l; store.set("lang", l); applyLang(); hideResults(); render(); renderNotify(); }
+  $("u-C").addEventListener("click", () => setUnit("C"));
+  $("u-F").addEventListener("click", () => setUnit("F"));
+  $("l-en").addEventListener("click", () => setLang("en"));
+  $("l-hi").addEventListener("click", () => setLang("hi"));
+
+  /* ---------- watchlist and notifications ---------- */
+  const MAX_WATCH = 5;
+  const key = (p) => p.lat.toFixed(2) + "," + p.lon.toFixed(2);
+  const alertId = (p, a) => key(p) + "|" + a.type + "|" + a.date + "|" + a.level;
+  const slim = (p) => ({ name: p.name, hi: p.hi, sub: p.sub, subHi: p.subHi, lat: p.lat, lon: p.lon, here: p.here });
+  const watch = { status: {}, last: 0, busy: false };
+  let swReg = null;
+
+  const getWatch = () => store.get("watch", []);
+  const isWatched = (p) => getWatch().some((x) => key(x) === key(p));
+  const notifSupported = () => typeof window !== "undefined" && "Notification" in window;
+  const notifOn = () => store.get("notify", false) === true && notifSupported() && Notification.permission === "granted";
+  const minLevel = () => { const v = Number(store.get("minLevel", 2)); return v >= 1 && v <= 3 ? v : 2; };
+
+  async function registerSW() {
+    if (!("serviceWorker" in navigator) || location.protocol === "file:") return;
+    try { swReg = await navigator.serviceWorker.register("sw.js"); } catch (e) { swReg = null; }
+  }
+
+  /* Phones need the service worker to show a notification; desktop browsers can also use the page itself. */
+  async function showNote(title, opts) {
+    try {
+      if ("serviceWorker" in navigator && location.protocol !== "file:") {
+        const reg = swReg || (await navigator.serviceWorker.getRegistration());
+        if (reg) { await reg.showNotification(title, opts); return true; }
+      }
+    } catch (e) { /* fall back to a page notification */ }
+    try {
+      const n = new Notification(title, opts);
+      n.onclick = () => { window.focus(); n.close(); };
+      return true;
+    } catch (e) { return false; }
+  }
+
+  function notifyAlert(place, a) {
+    const title = `${t("lvlName")[a.level - 1]} · ${alertTitle(a)} · ${placeName(place)}`;
+    const body = `${whenLabel(a)}. ${alertDetail(a)} ${t("alTip")[a.type]}`;
+    return showNote(title, { body, tag: alertId(place, a), requireInteraction: a.level === 3, vibrate: [200, 100, 200] });
+  }
+
+  function markKnown(place, alerts) {
+    if (!alerts) return;
+    const known = store.get("notified", {});
+    const now = Date.now();
+    alerts.forEach((a) => { if (a.level >= minLevel()) known[alertId(place, a)] = now; });
+    store.set("notified", known);
+  }
+
+  /* silent = record what exists now without notifying (used right after switching on). */
+  async function checkWatch(silent) {
+    const list = getWatch();
+    if (!list.length) { renderNotify(); return; }
+    if (watch.busy) return;
+    watch.busy = true;
+    renderNotify();
+    const results = await Promise.all(list.map(async (p) => {
+      try { const { w, air } = await fetchWeather(p); return { p, alerts: computeAlerts(w, air) }; }
+      catch (e) { return { p, alerts: null }; }
+    }));
+    const now = Date.now();
+    const active = notifOn();
+    const known = store.get("notified", {});
+    Object.keys(known).forEach((k) => { if (now - known[k] > 3 * 864e5) delete known[k]; });
+    const fresh = [];
+    for (const { p, alerts } of results) {
+      watch.status[key(p)] = { alerts, at: now };
+      if (!alerts || !active) continue;
+      for (const a of alerts) {
+        const id = alertId(p, a);
+        if (a.level < minLevel() || known[id]) continue;
+        known[id] = now;
+        fresh.push({ p, a });
+      }
+    }
+    store.set("notified", known);
+    watch.last = now;
+    watch.busy = false;
+    if (active && !silent) {
+      fresh.sort((x, y) => y.a.level - x.a.level);
+      for (const f of fresh.slice(0, 3)) await notifyAlert(f.p, f.a);
+      if (fresh.length > 3) await showNote(t("moreAlerts")(fresh.length - 3), { body: t("openApp"), tag: "mausam-more" });
+    }
+    renderNotify();
+  }
+
+  function toggleWatch(p) {
+    let list = getWatch();
+    if (isWatched(p)) {
+      list = list.filter((x) => key(x) !== key(p));
+    } else if (list.length < MAX_WATCH) {
+      list.push(slim(p));
+      if (p === state.place && state.status === "ready") {
+        watch.status[key(p)] = { alerts: state.alerts, at: Date.now() };
+        if (notifOn()) markKnown(p, state.alerts);
+      }
+    }
+    store.set("watch", list);
+    renderNotify();
+  }
+
+  async function setNotify(on) {
+    if (!on) { store.set("notify", false); renderNotify(); return; }
+    if (!notifSupported()) { renderNotify(); return; }
+    let perm = Notification.permission;
+    if (perm === "default") {
+      try { perm = await Notification.requestPermission(); } catch (e) { perm = "denied"; }
+    }
+    if (perm !== "granted") { store.set("notify", false); renderNotify(); return; }
+    store.set("notify", true);
+    if (!getWatch().length && state.place) toggleWatch(state.place);
+    await checkWatch(true);
+  }
+
+  const fmtTime = (ms) =>
+    new Intl.DateTimeFormat(state.lang === "hi" ? "hi-IN" : "en-IN", { hour: "numeric", minute: "2-digit", timeZone: "Asia/Kolkata" }).format(new Date(ms));
+
+  function renderNotify() {
+    const el = $("notify-card");
+    if (!el) return;
+    const list = getWatch();
+    const supported = notifSupported();
+    const on = notifOn();
+    const msg = !supported ? t("notifUnsupported") : Notification.permission === "denied" ? t("notifBlocked") : on ? t("notifOn") : t("notifOff");
+    const cur = state.place;
+    const curWatched = cur ? isWatched(cur) : false;
+
+    const rows = list.map((p, i) => {
+      const st = watch.status[key(p)];
+      let status;
+      if (!st) status = `<span class="w-status">${esc(t("watchChecking"))}</span>`;
+      else if (!st.alerts) status = `<span class="w-status">${esc(t("watchFail"))}</span>`;
+      else if (!st.alerts.length) status = `<span class="w-status">${esc(t("watchNone"))}</span>`;
+      else {
+        const a = st.alerts[0];
+        status = `<span class="sev s l${a.level}">${esc(t("lvlName")[a.level - 1])}</span> <span class="w-status">${esc(alertTitle(a))} · ${esc(whenLabel(a))}${st.alerts.length > 1 ? ` (+${st.alerts.length - 1})` : ""}</span>`;
+      }
+      return `<li class="w-row"><div><button type="button" class="w-name" data-act="go" data-i="${i}">${esc(placeName(p))}</button>${placeSub(p) ? `<span class="w-sub">${esc(placeSub(p))}</span>` : ""}<div>${status}</div></div>` +
+        `<button type="button" class="btn-sm" data-act="rm" data-i="${i}" aria-label="${esc(t("watchRemove"))}: ${esc(placeName(p))}">${esc(t("watchRemove"))}</button></li>`;
+    }).join("");
+
+    const actions = [];
+    if (cur && !curWatched && list.length < MAX_WATCH) actions.push(`<button type="button" class="btn-sm" data-act="add">${esc(t("watchAdd")(placeName(cur)))}</button>`);
+    if (list.length) actions.push(`<button type="button" class="btn-sm" data-act="check">${esc(t("checkNow"))}</button>`);
+    if (on) actions.push(`<button type="button" class="btn-sm" data-act="test">${esc(t("testBtn"))}</button>`);
+
+    const when = watch.busy ? t("watchChecking") : watch.last ? `${t("lastChecked")} ${fmtTime(watch.last)} IST. ` : "";
+
+    el.innerHTML =
+      `<h2>${esc(t("notifTitle"))}</h2>` +
+      `<div class="nrow"><label class="switch"><input type="checkbox" id="n-switch" role="switch" aria-describedby="n-msg"${on ? " checked" : ""}${supported ? "" : " disabled"}><span>${esc(t("notifSwitch"))}</span></label><span class="n-msg" id="n-msg">${esc(msg)}</span></div>` +
+      `<div class="nrow"><label for="n-level">${esc(t("notifMin"))}</label><select id="n-level" class="select">${t("lvlOpt").map((o, i) => `<option value="${i + 1}"${minLevel() === i + 1 ? " selected" : ""}>${esc(o)}</option>`).join("")}</select></div>` +
+      `<h3 class="n-sub">${esc(t("watchTitle"))}</h3>` +
+      (list.length ? `<ul class="watch">${rows}</ul>` : `<p class="n-empty">${esc(t("watchEmpty"))}</p>`) +
+      (cur && !curWatched && list.length >= MAX_WATCH ? `<p class="n-empty">${esc(t("watchFull"))}</p>` : "") +
+      (actions.length ? `<div class="n-actions">${actions.join("")}</div>` : "") +
+      `<p class="n-foot">${esc(when)}${esc(t("checkEvery"))} ${esc(t("notifNote"))}</p>`;
+
+    el.onclick = (e) => {
+      const b = e.target.closest("button[data-act]");
+      if (!b) return;
+      const act = b.dataset.act, i = Number(b.dataset.i);
+      if (act === "go") pick(list[i]);
+      else if (act === "rm") toggleWatch(list[i]);
+      else if (act === "add") toggleWatch(state.place);
+      else if (act === "check") checkWatch(false);
+      else if (act === "test") {
+        showNote(t("testTitle"), { body: t("testBody"), tag: "mausam-test" }).then((ok) => { if (!ok) notify(t("testFail")); });
+      }
+    };
+    el.onchange = (e) => {
+      if (e.target.id === "n-switch") setNotify(e.target.checked);
+      else if (e.target.id === "n-level") store.set("minLevel", Number(e.target.value));
+    };
+  }
+
+  /* ---------- start ---------- */
+  applyLang();
+  renderNotify();
+  registerSW();
+  load(store.get("last", null) || CITIES[0]);
+  checkWatch(false);
+  setInterval(() => checkWatch(false), 30 * 60 * 1000);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && Date.now() - watch.last > 10 * 60 * 1000) checkWatch(false);
+  });
+})();
+</script>
+</body>
+</html>
